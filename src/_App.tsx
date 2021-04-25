@@ -3,33 +3,16 @@ import axios from "axios";
 
 const App = () => {
   //? 렌더링할 데이터를 담을 변수
-  const [result, setResult] = useState<any | any[]>({
-    data: { userFeeds: [] },
-  });
+  const [result, setResult] = useState<any | any[]>([]);
   //? axios로 불러온 데이터 전체를 담을 변수
   const [item, setItem] = useState<any | any[]>([]);
   //? 로딩. 데이터를 받아왔는지 판별
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const fetchMoreData = async () => {
-    const lastIdx = result.data.userFeeds.length - 1;
-    const lastItem = result.data.userFeeds[lastIdx];
-    const feedId = lastItem?.feedId;
-    console.log(lastIdx);
     setIsLoading(true);
-    await axios
-      .post(`https://localhost:5000/feed/lookup`, {
-        topicId: 1,
-        limit: 10,
-        feedId: feedId,
-      })
-      .then((res) => {
-        const response = res.data;
-        const newResult = result.data.userFeeds.concat(response.data.userFeeds);
-        setResult({
-          data: { userFeeds: newResult },
-        });
-      });
+    setResult(result.concat(item.slice(0, 20)));
+    setItem(item.slice(20));
     setIsLoading(false);
   };
 
@@ -56,13 +39,16 @@ const App = () => {
 
   const getFetchData = async () => {
     await axios
-      .post(`https://localhost:5000/feed/lookup`, { topicId: 1, limit: 10 })
+      .get(
+        `http://openlibrary.org/search.json?author=tolkien
+    `
+      )
       .then((res) => {
-        let response = res.data;
-        console.log("response", response);
-        setResult({
-          data: { userFeeds: response.data.userFeeds },
-        });
+        let response = res.data.docs;
+        console.log(response);
+        setResult(response.slice(0, 20));
+        response = response.slice(20);
+        setItem(response);
         setIsLoading(false);
       })
       .catch((err) => {
@@ -70,32 +56,30 @@ const App = () => {
       });
   };
   console.log("result:", result);
-
   useEffect(() => {
     getFetchData();
   }, []);
-
   useEffect(() => {
     window.addEventListener("scroll", _infiniteScroll, true);
   }, [_infiniteScroll]);
 
-  if (isLoading && result.data.userFeeds.length === 0) {
+  if (isLoading) {
     return <div>Loading...</div>;
   }
   return (
     <div>
-      {result.data.userFeeds.map((res: any, idx: number) => {
+      {result.map((res: any, idx: number) => {
+        console.log(res.name);
         return (
-          <div key={res.feedId}>
-            <h2>{idx}</h2>
-            <li>feedId: {res.feedId}</li>
-            <li>nickName: {res.user.nickName}</li>
-            <li>topic: {res.topic}</li>
-            <li>
-              content: {res.content[0]}
-              {res.content[1]}
-            </li>
-            <li>date: {res.createdAt}</li>
+          <div key={res.id}>
+            <h2>
+              {idx}. &nbsp;{res.title}
+            </h2>
+            <ul>
+              <li>Author Name: {res.author_name}</li>
+              <li>First Publish Year: {res.first_publish_year}</li>
+              <li>E-Book Count: {res.ebook_count_i}</li>
+            </ul>
           </div>
         );
       })}
